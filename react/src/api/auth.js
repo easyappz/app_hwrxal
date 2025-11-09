@@ -1,11 +1,11 @@
 import { instance } from './axios';
 
 export const login = (email, password) => {
-  return instance.post('/api/login/', { email, password });
+  return instance.post('/api/auth/login/', { email, password });
 };
 
 export const register = (email, password, firstName, lastName) => {
-  return instance.post('/api/register/', {
+  return instance.post('/api/auth/register/', {
     email,
     password,
     first_name: firstName,
@@ -14,26 +14,26 @@ export const register = (email, password, firstName, lastName) => {
 };
 
 export const logout = (refreshToken) => {
-  return instance.post('/api/logout/', { refresh: refreshToken });
+  return instance.post('/api/auth/logout/', { refresh: refreshToken });
 };
 
 export const refreshToken = (refresh) => {
-  return instance.post('/api/token/refresh/', { refresh });
+  return instance.post('/api/auth/token/refresh/', { refresh });
 };
 
 export const requestPasswordReset = (email) => {
-  return instance.post('/api/password-reset/', { email });
+  return instance.post('/api/auth/password/reset/', { email });
 };
 
 export const confirmPasswordReset = (token, newPassword) => {
-  return instance.post('/api/password-reset/confirm/', {
+  return instance.post('/api/auth/password/reset/confirm/', {
     token,
     new_password: newPassword
   });
 };
 
 export const changePassword = (oldPassword, newPassword) => {
-  return instance.post('/api/change-password/', {
+  return instance.post('/api/auth/password/change/', {
     old_password: oldPassword,
     new_password: newPassword
   });
