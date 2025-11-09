@@ -72,17 +72,33 @@ INSTALLED_APPS = [
 ]
 
 # REST Framework configuration
+# How to customize:
+# - Add custom permission classes to DEFAULT_PERMISSION_CLASSES
+# - Add custom authentication backends to DEFAULT_AUTHENTICATION_CLASSES
+# - Modify pagination, filtering, or throttling settings as needed
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # Add more authentication backends here if needed:
+        # "rest_framework.authentication.SessionAuthentication",  # For browsable API
+        # "rest_framework.authentication.TokenAuthentication",  # For DRF tokens
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
+        # You can change to more permissive or restrictive defaults:
+        # "rest_framework.permissions.AllowAny",
+        # "rest_framework.permissions.IsAdminUser",
+        # Or create custom permission classes in api/permissions.py
     ],
 }
 
 # Simple JWT configuration
+# Documentation: https://django-rest-framework-simplejwt.readthedocs.io/
+# How to customize:
+# - Adjust token lifetimes for your security requirements
+# - Enable/disable token rotation and blacklisting
+# - Customize token claims and header types
 SIMPLE_JWT = {
     # Token lifetimes
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
@@ -159,8 +175,42 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-# Database
+# Database Configuration
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# PRODUCTION DATABASE CONFIGURATION:
+# To switch to PostgreSQL in production, change the configuration to:
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": "your_database_name",
+#         "USER": "your_database_user",
+#         "PASSWORD": "your_database_password",
+#         "HOST": "localhost",  # Or your database host
+#         "PORT": "5432",
+#         "CONN_MAX_AGE": 600,  # Connection pooling
+#     }
+# }
+#
+# To switch to MySQL in production:
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.mysql",
+#         "NAME": "your_database_name",
+#         "USER": "your_database_user",
+#         "PASSWORD": "your_database_password",
+#         "HOST": "localhost",
+#         "PORT": "3306",
+#         "OPTIONS": {
+#             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+#             "charset": "utf8mb4",
+#         },
+#     }
+# }
+#
+# Note: Remember to install the appropriate database driver:
+# - PostgreSQL: psycopg2-binary
+# - MySQL: mysqlclient
 
 DATABASES = {
     "default": {
@@ -211,5 +261,26 @@ STATIC_URL = "django_static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Custom User Model
+# Custom User Model Configuration
+# This setting points to our custom User model defined in api/models.py
+# which uses email as the primary authentication field instead of username.
+# All authentication and user-related operations will use this model.
 AUTH_USER_MODEL = "api.User"
+
+# ### APP-SPECIFIC SETTINGS SECTION ###
+# Add your application-specific settings below this section
+# Examples:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your-password'
+#
+# AWS_ACCESS_KEY_ID = 'your-aws-access-key'
+# AWS_SECRET_ACCESS_KEY = 'your-aws-secret-key'
+# AWS_STORAGE_BUCKET_NAME = 'your-bucket-name'
+#
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# ### END APP-SPECIFIC SETTINGS ###
