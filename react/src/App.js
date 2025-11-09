@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Profile from './components/Profile';
 import PasswordReset from './components/PasswordReset';
+import ChangePassword from './components/ChangePassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -18,7 +19,8 @@ function App() {
         '/login',
         '/register',
         '/profile',
-        '/password-reset'
+        '/password-reset',
+        '/change-password'
       ]);
     }
   }, []);
@@ -38,6 +40,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/change-password"
+                element={
+                  <ProtectedRoute>
+                    <ChangePassword />
                   </ProtectedRoute>
                 }
               />
