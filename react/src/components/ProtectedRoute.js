@@ -1,33 +1,28 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
 
   if (loading) {
     return (
       <div 
-        data-easytag="id1-react/src/components/ProtectedRoute.js"
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          fontSize: '18px',
-          color: '#666'
+        style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: 'calc(100vh - 80px)' 
         }}
+        data-easytag="id107-react/src/components/ProtectedRoute.js"
       >
-        <div data-easytag="id2-react/src/components/ProtectedRoute.js">
-          Loading...
-        </div>
+        Loading...
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;

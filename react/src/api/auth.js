@@ -1,51 +1,40 @@
-import instance from './axios';
+import { instance } from './axios';
 
-export const loginUser = async (email, password) => {
-  const response = await instance.post('/api/auth/login/', {
-    email,
-    password
-  });
-  return response.data;
+export const login = (email, password) => {
+  return instance.post('/api/login/', { email, password });
 };
 
-export const registerUser = async (email, password, firstName, lastName) => {
-  const response = await instance.post('/api/auth/register/', {
+export const register = (email, password, firstName, lastName) => {
+  return instance.post('/api/register/', {
     email,
     password,
     first_name: firstName,
     last_name: lastName
   });
-  return response.data;
 };
 
-export const getUserProfile = async () => {
-  const response = await instance.get('/api/auth/profile/');
-  return response.data;
+export const logout = (refreshToken) => {
+  return instance.post('/api/logout/', { refresh: refreshToken });
 };
 
-export const updateUserProfile = async (data) => {
-  const response = await instance.put('/api/auth/profile/', data);
-  return response.data;
+export const refreshToken = (refresh) => {
+  return instance.post('/api/token/refresh/', { refresh });
 };
 
-export const requestPasswordReset = async (email) => {
-  const response = await instance.post('/api/auth/password-reset/', {
-    email
-  });
-  return response.data;
+export const requestPasswordReset = (email) => {
+  return instance.post('/api/password-reset/', { email });
 };
 
-export const confirmPasswordReset = async (token, newPassword) => {
-  const response = await instance.post('/api/auth/password-reset/confirm/', {
+export const confirmPasswordReset = (token, newPassword) => {
+  return instance.post('/api/password-reset/confirm/', {
     token,
     new_password: newPassword
   });
-  return response.data;
 };
 
-export const refreshToken = async (refreshToken) => {
-  const response = await instance.post('/api/auth/token/refresh/', {
-    refresh: refreshToken
+export const changePassword = (oldPassword, newPassword) => {
+  return instance.post('/api/change-password/', {
+    old_password: oldPassword,
+    new_password: newPassword
   });
-  return response.data;
 };
