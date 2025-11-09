@@ -1,73 +1,102 @@
-import { instance } from './axios';
+import instance from './axios';
 
 /**
- * API functions for authentication
+ * Authentication service for user registration, login, and profile management
  */
-
-export const authAPI = {
+const authService = {
   /**
-   * Login user
-   * @param {Object} credentials - User credentials
-   * @param {string} credentials.email - User email
-   * @param {string} credentials.password - User password
-   * @returns {Promise} - Response with tokens and user data
-   */
-  login: async (credentials) => {
-    const response = await instance.post('/api/auth/login/', credentials);
-    return response.data;
-  },
-
-  /**
-   * Register new user
+   * Register a new user
    * @param {Object} userData - User registration data
    * @param {string} userData.email - User email
-   * @param {string} userData.password - User password
    * @param {string} userData.first_name - User first name
    * @param {string} userData.last_name - User last name
-   * @returns {Promise} - Response with tokens and user data
+   * @param {string} userData.password - User password
+   * @returns {Promise} Registration response
    */
   register: async (userData) => {
-    const response = await instance.post('/api/auth/register/', userData);
+    const response = await instance.post('/api/register/', userData);
     return response.data;
   },
 
   /**
-   * Get current user profile
-   * @returns {Promise} - User data
+   * Login user
+   * @param {Object} credentials - Login credentials
+   * @param {string} credentials.email - User email
+   * @param {string} credentials.password - User password
+   * @returns {Promise} Login response with tokens
    */
-  getCurrentUser: async () => {
-    const response = await instance.get('/api/auth/profile/');
-    return response.data;
-  },
-
-  /**
-   * Refresh access token
-   * @param {string} refreshToken - Refresh token
-   * @returns {Promise} - Response with new access token
-   */
-  refreshToken: async (refreshToken) => {
-    const response = await instance.post('/api/auth/refresh/', {
-      refresh: refreshToken,
-    });
+  login: async (credentials) => {
+    const response = await instance.post('/api/login/', credentials);
+    if (response.data.access) {
+      localStorage.setItem('token', response.data.access);
+      if (response.data.refresh) {
+        localStorage.setItem('refreshToken', response.data.refresh);
+      }
+    }
     return response.data;
   },
 
   /**
    * Logout user
-   * @returns {Promise} - Response
    */
-  logout: async () => {
-    const response = await instance.post('/api/auth/logout/');
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  },
+
+  /**
+   * Get current user profile
+   * @returns {Promise} User profile data
+   */
+  getProfile: async () => {
+    const response = await instance.get('/api/profile/');
     return response.data;
   },
 
   /**
    * Update user profile
-   * @param {Object} userData - User data to update
-   * @returns {Promise} - Updated user data
+   * @param {Object} profileData - Profile data to update
+   * @returns {Promise} Updated profile data
    */
-  updateProfile: async (userData) => {
-    const response = await instance.patch('/api/auth/profile/', userData);
+  updateProfile: async (profileData) => {
+    const response = await instance.put('/api/profile/', profileData);
+    return response.data;
+  },
+
+  /**
+   * Request password reset
+   * @param {string} email - User email
+   * @returns {Promise} Password reset response
+   */
+  requestPasswordReset: async (email) => {
+    const response = await instance.post('/api/password-reset/', { email });
+    return response.data;
+  },
+
+  /**
+   * Confirm password reset
+   * @param {Object} resetData - Password reset data
+   * @param {string} resetData.token - Reset token
+   * @param {string} resetData.password - New password
+   * @returns {Promise} Password reset confirmation response
+   */
+  confirmPasswordReset: async (resetData) => {
+    const response = await instance.post('/api/password-reset/confirm/', resetData);
+    return response.data;
+  },
+
+  /**
+   * Refresh access token
+   * @returns {Promise} New access token
+   */
+  refreshToken: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    const response = await instance.post('/api/token/refresh/', { refresh: refreshToken });
+    if (response.data.access) {
+      localStorage.setItem('token', response.data.access);
+    }
     return response.data;
   },
 };
+
+export default authService;
