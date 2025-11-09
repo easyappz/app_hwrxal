@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
       setupTokenRefresh();
     } catch (error) {
       console.error('Failed to load user:', error);
-      // If loading user fails, clear tokens
+      // If loading user fails, clear tokens and logout
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       setUser(null);
@@ -113,13 +113,12 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Login user
-   * @param {Object} credentials - User credentials
-   * @param {string} credentials.email - User email
-   * @param {string} credentials.password - User password
+   * @param {string} email - User email
+   * @param {string} password - User password
    */
-  const login = async (credentials) => {
+  const login = async (email, password) => {
     try {
-      const data = await authAPI.login(credentials);
+      const data = await authAPI.login({ email, password });
       
       // Store tokens
       if (data.access) {
@@ -142,9 +141,15 @@ export const AuthProvider = ({ children }) => {
       return { success: true, data };
     } catch (error) {
       console.error('Login failed:', error);
+      
+      // If token-related error, ensure logout
+      if (error.message && error.message.toLowerCase().includes('token')) {
+        await logout();
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Login failed' 
+        error: error.message || 'Login failed. Please try again.'
       };
     }
   };
@@ -180,7 +185,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Registration failed:', error);
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Registration failed' 
+        error: error.message || 'Registration failed. Please try again.'
       };
     }
   };
@@ -190,7 +195,10 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     try {
-      await authAPI.logout();
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        await authAPI.logout(refreshToken);
+      }
     } catch (error) {
       console.error('Logout API call failed:', error);
     } finally {
@@ -219,9 +227,15 @@ export const AuthProvider = ({ children }) => {
       return { success: true, data: updatedUser };
     } catch (error) {
       console.error('Update user failed:', error);
+      
+      // If token-related error, logout
+      if (error.message && error.message.toLowerCase().includes('token')) {
+        await logout();
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Update failed' 
+        error: error.message || 'Update failed. Please try again.'
       };
     }
   };

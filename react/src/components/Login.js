@@ -16,15 +16,21 @@ const Login = () => {
     setError('');
     setLoading(true);
 
-    const result = await login(email, password);
-    
-    if (result.success) {
-      navigate('/profile');
-    } else {
-      setError(result.error);
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        navigate('/profile');
+      } else {
+        // Display user-friendly error message
+        setError(result.error);
+      }
+    } catch (err) {
+      // Catch any unexpected errors
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (

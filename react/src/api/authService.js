@@ -9,6 +9,78 @@ const TOKEN_KEY = 'token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
 /**
+ * Parse error response and return user-friendly message
+ * @param {Object} error - Axios error object
+ * @returns {string} User-friendly error message
+ */
+const parseErrorMessage = (error) => {
+  if (!error.response) {
+    return 'Network error. Please check your connection.';
+  }
+
+  const { status, data } = error.response;
+
+  // Handle specific status codes
+  if (status === 401) {
+    // Check for token-specific errors
+    if (data?.detail) {
+      const detail = data.detail.toLowerCase();
+      if (detail.includes('token') && detail.includes('not valid')) {
+        return 'Your session has expired. Please log in again.';
+      }
+      if (detail.includes('token') && detail.includes('expired')) {
+        return 'Your session has expired. Please log in again.';
+      }
+      if (detail.includes('credentials')) {
+        return 'Invalid email or password.';
+      }
+      return data.detail;
+    }
+    if (data?.error) {
+      return data.error;
+    }
+    return 'Invalid credentials. Please try again.';
+  }
+
+  if (status === 400) {
+    // Handle validation errors
+    if (typeof data === 'object' && !data.detail && !data.error) {
+      const errors = [];
+      Object.keys(data).forEach(key => {
+        if (Array.isArray(data[key])) {
+          errors.push(...data[key]);
+        } else {
+          errors.push(data[key]);
+        }
+      });
+      return errors.join(' ');
+    }
+    if (data?.detail) return data.detail;
+    if (data?.error) return data.error;
+    return 'Invalid request. Please check your input.';
+  }
+
+  if (status === 403) {
+    return 'Access denied. You do not have permission to perform this action.';
+  }
+
+  if (status === 404) {
+    return 'Resource not found.';
+  }
+
+  if (status >= 500) {
+    return 'Server error. Please try again later.';
+  }
+
+  // Fallback to any message from server
+  if (data?.detail) return data.detail;
+  if (data?.error) return data.error;
+  if (data?.message) return data.message;
+
+  return 'An error occurred. Please try again.';
+};
+
+/**
  * Save tokens to localStorage
  * @param {string} accessToken - JWT access token
  * @param {string} refreshToken - JWT refresh token
@@ -66,7 +138,8 @@ export const register = async (userData) => {
     
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -87,7 +160,8 @@ export const login = async (credentials) => {
     
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -110,7 +184,8 @@ export const logout = async (refreshToken = null) => {
   } catch (error) {
     // Clear tokens even if request fails
     clearTokens();
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -142,7 +217,8 @@ export const refreshToken = async (refreshToken = null) => {
   } catch (error) {
     // If refresh fails, clear tokens
     clearTokens();
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -155,7 +231,8 @@ export const getCurrentUser = async () => {
     const response = await instance.get('/api/auth/me/');
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -172,7 +249,8 @@ export const updateProfile = async (userData) => {
     const response = await instance.patch('/api/auth/me/', userData);
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -189,7 +267,8 @@ export const changePassword = async (passwordData) => {
     const response = await instance.post('/api/auth/password/change/', passwordData);
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -203,7 +282,8 @@ export const requestPasswordReset = async (email) => {
     const response = await instance.post('/api/auth/password/reset/', { email });
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
@@ -220,7 +300,8 @@ export const confirmPasswordReset = async (resetData) => {
     const response = await instance.post('/api/auth/password/reset/confirm/', resetData);
     return response.data;
   } catch (error) {
-    throw error;
+    const errorMessage = parseErrorMessage(error);
+    throw new Error(errorMessage);
   }
 };
 
