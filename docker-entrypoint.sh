@@ -32,8 +32,8 @@ if [ "$DB_INIT" = true ]; then
     
     # Create superuser with admin credentials
     echo "==> Creating superuser..."
-    DJANGO_SETTINGS_MODULE="config.settings" DJANGO_SUPERUSER_PASSWORD=easyappzadmin /opt/venv/bin/python \
-        manage.py createsuperuser --noinput --username admin --email admin@easyappz.ru
+    DJANGO_SETTINGS_MODULE="config.settings" DJANGO_SUPERUSER_PASSWORD=easyappzadmin DJANGO_SUPERUSER_EMAIL=admin@easyappz.ru /opt/venv/bin/python \
+        manage.py createsuperuser --noinput --email admin@easyappz.ru
 fi
 
 /bin/chown -R appuser:appuser /app/persistent
