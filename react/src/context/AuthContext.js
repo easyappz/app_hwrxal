@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { loginUser as apiLogin, getUserProfile, refreshToken as apiRefreshToken } from '../api/auth';
+import { loginUser as apiLogin, getUserProfile, refreshToken as apiRefreshToken, updateUserProfile as apiUpdateUserProfile } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -72,6 +72,20 @@ export const AuthProvider = ({ children }) => {
     return false;
   };
 
+  const updateProfile = async (profileData) => {
+    try {
+      const updatedUser = await apiUpdateUserProfile(profileData);
+      setUser(updatedUser);
+      return { success: true, data: updatedUser };
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.response?.data || 'Failed to update profile.'
+      };
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -79,7 +93,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     refreshAuthToken,
-    checkAuth
+    checkAuth,
+    updateProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
