@@ -1,6 +1,7 @@
 /** Не меняй код этого файла никогда */
 /** Если нужно добавить еще обработчики можешь их добавить в отдельном файле, используя interceptors */
 import axios from 'axios';
+import './authInterceptor';
 
 /**
  * Axios instance configuration with base URL, authentication credentials, and response interceptors
@@ -62,8 +63,5 @@ instance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Import auth interceptor to handle conditional Authorization header
-import './authInterceptor';
 
 export default instance;
