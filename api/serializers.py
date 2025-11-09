@@ -382,29 +382,9 @@ class TokenRefreshSerializer(serializers.Serializer):
     """
     Serializer for refreshing access tokens using refresh token.
     
-    This is a custom implementation that works with our RefreshToken model.
-    If you prefer to use djangorestframework-simplejwt's default behavior,
-    you can use their TokenRefreshSerializer directly.
+    Validates the refresh token format and existence.
     """
     refresh = serializers.CharField(required=True)
-    
-    def validate_refresh(self, value):
-        """
-        Validate that refresh token exists and is valid.
-        """
-        try:
-            refresh_token = RefreshToken.objects.get(token=value)
-            
-            if not refresh_token.is_valid():
-                raise serializers.ValidationError("Refresh token is invalid or expired.")
-            
-            # Store for later use in view
-            self.context['refresh_token_obj'] = refresh_token
-            
-        except RefreshToken.DoesNotExist:
-            raise serializers.ValidationError("Refresh token not found.")
-        
-        return value
 
 
 class MessageSerializer(serializers.Serializer):

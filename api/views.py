@@ -120,15 +120,22 @@ class UserLoginView(APIView):
         access_token = str(jwt_refresh.access_token)
         refresh_token_str = str(jwt_refresh)
         
-        # Store refresh token in database
+        # Store the JWT refresh token in database for tracking purposes
         user_agent = request.META.get('HTTP_USER_AGENT', '')
         ip_address = self.get_client_ip(request)
         
-        RefreshToken.create_token(
+        # Calculate expiration time based on Simple JWT settings
+        from django.conf import settings
+        refresh_lifetime = settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME')
+        expires_at = timezone.now() + refresh_lifetime
+        
+        # Create token record with the actual JWT token string
+        RefreshToken.objects.create(
             user=user,
-            user_agent=user_agent,
-            ip_address=ip_address,
-            expires_in_days=7
+            token=refresh_token_str,
+            expires_at=expires_at,
+            user_agent=user_agent or "",
+            ip_address=ip_address
         )
         
         # Return tokens and user data
@@ -149,7 +156,7 @@ class TokenRefreshView(APIView):
     API endpoint for refreshing access tokens.
     
     Accepts a refresh token and returns a new access token.
-    Optionally rotates the refresh token for enhanced security.
+    Uses Simple JWT for token validation and generation.
     """
     permission_classes = [AllowAny]
     
@@ -171,13 +178,13 @@ class TokenRefreshView(APIView):
         description="Refresh access token using refresh token"
     )
     def post(self, request):
-        serializer = TokenRefreshSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
+        refresh_token_str = request.data.get('refresh')
         
-        refresh_token_str = serializer.validated_data['refresh']
+        if not refresh_token_str:
+            return Response(
+                {"detail": "Refresh token is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             # Use Simple JWT to validate and refresh the token
@@ -188,11 +195,34 @@ class TokenRefreshView(APIView):
                 "access": new_access_token
             }
             
-            # Optional: Token rotation (if ROTATE_REFRESH_TOKENS is True in settings)
-            # Simple JWT handles this automatically when configured
-            # We just need to return the new refresh token if it was rotated
-            if hasattr(jwt_refresh, 'token'):
-                response_data["refresh"] = str(jwt_refresh)
+            # If token rotation is enabled, Simple JWT will blacklist the old token
+            # and we should return the new refresh token
+            from django.conf import settings
+            if settings.SIMPLE_JWT.get('ROTATE_REFRESH_TOKENS', False):
+                # Get the new refresh token after rotation
+                new_refresh_token = str(jwt_refresh)
+                response_data["refresh"] = new_refresh_token
+                
+                # Update our database record with the new token
+                try:
+                    old_token = RefreshToken.objects.get(token=refresh_token_str)
+                    # Mark old token as revoked
+                    old_token.revoke()
+                    
+                    # Create new token record
+                    refresh_lifetime = settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME')
+                    expires_at = timezone.now() + refresh_lifetime
+                    
+                    RefreshToken.objects.create(
+                        user=old_token.user,
+                        token=new_refresh_token,
+                        expires_at=expires_at,
+                        user_agent=old_token.user_agent,
+                        ip_address=old_token.ip_address
+                    )
+                except RefreshToken.DoesNotExist:
+                    # Token not in our database, but valid JWT - this is ok
+                    pass
             
             return Response(response_data, status=status.HTTP_200_OK)
             
@@ -239,16 +269,16 @@ class UserLogoutView(APIView):
             )
         
         try:
-            # Revoke the refresh token in our database
-            refresh_token = RefreshToken.objects.get(token=refresh_token_str)
-            refresh_token.revoke()
+            # Blacklist the token using Simple JWT
+            jwt_refresh = JWTRefreshToken(refresh_token_str)
+            jwt_refresh.blacklist()
             
-            # Also blacklist it using Simple JWT (if blacklist app is installed)
+            # Also revoke it in our database if it exists
             try:
-                jwt_refresh = JWTRefreshToken(refresh_token_str)
-                jwt_refresh.blacklist()
-            except Exception:
-                # If blacklist fails or is not configured, continue
+                refresh_token = RefreshToken.objects.get(token=refresh_token_str)
+                refresh_token.revoke()
+            except RefreshToken.DoesNotExist:
+                # Token not in our database, but blacklisted in JWT - this is ok
                 pass
             
             return Response(
@@ -256,7 +286,7 @@ class UserLogoutView(APIView):
                 status=status.HTTP_200_OK
             )
             
-        except RefreshToken.DoesNotExist:
+        except Exception as e:
             return Response(
                 {"detail": "Invalid refresh token."},
                 status=status.HTTP_400_BAD_REQUEST
