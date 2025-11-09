@@ -23,7 +23,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     Handles:
     - Email and password validation
-    - Password confirmation matching
+    - Password confirmation matching (optional - frontend can handle this)
     - Password strength validation
     - Automatic role assignment (default 'user' role)
     """
@@ -35,9 +35,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     )
     password_confirm = serializers.CharField(
         write_only=True,
-        required=True,
+        required=False,
         style={'input_type': 'password'},
-        help_text="Must match the password field"
+        help_text="Must match the password field (optional if frontend validates)"
     )
     first_name = serializers.CharField(required=True, max_length=150)
     last_name = serializers.CharField(required=True, max_length=150)
@@ -69,9 +69,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """
-        Validate that password and password_confirm match.
+        Validate that password and password_confirm match (if password_confirm is provided).
         """
-        if attrs['password'] != attrs['password_confirm']:
+        password_confirm = attrs.get('password_confirm')
+        if password_confirm and attrs['password'] != password_confirm:
             raise serializers.ValidationError({
                 'password_confirm': "Passwords do not match."
             })
@@ -82,7 +83,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         Create a new user with hashed password and default 'user' role.
         """
         # Remove password_confirm as it's not needed for user creation
-        validated_data.pop('password_confirm')
+        validated_data.pop('password_confirm', None)
         
         # Extract password to hash it properly
         password = validated_data.pop('password')
