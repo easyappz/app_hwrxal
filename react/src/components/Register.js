@@ -24,7 +24,7 @@ const Register = () => {
     }
 
     setLoading(true);
-    const result = await register(email, password, firstName, lastName);
+    const result = await register(email, password, firstName, lastName, confirmPassword);
     
     if (result.success) {
       navigate('/profile');

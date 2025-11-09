@@ -4,10 +4,11 @@ export const login = (email, password) => {
   return instance.post('/api/auth/login/', { email, password });
 };
 
-export const register = (email, password, firstName, lastName) => {
+export const register = (email, password, firstName, lastName, passwordConfirm) => {
   return instance.post('/api/auth/register/', {
     email,
     password,
+    password_confirm: passwordConfirm,
     first_name: firstName,
     last_name: lastName
   });
