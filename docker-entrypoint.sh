@@ -25,6 +25,13 @@ DJANGO_SETTINGS_MODULE="config.settings" /opt/venv/bin/python \
     manage.py migrate --noinput
 
 if [ "$DB_INIT" = true ]; then
+    # Initialize default roles first
+    echo "==> Initializing default roles..."
+    DJANGO_SETTINGS_MODULE="config.settings" /opt/venv/bin/python \
+        manage.py init_roles
+    
+    # Create superuser with admin credentials
+    echo "==> Creating superuser..."
     DJANGO_SETTINGS_MODULE="config.settings" DJANGO_SUPERUSER_PASSWORD=easyappzadmin /opt/venv/bin/python \
         manage.py createsuperuser --noinput --username admin --email admin@easyappz.ru
 fi
