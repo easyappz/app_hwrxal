@@ -1,38 +1,37 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, Role
+from api.models import User, Role
 
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     """
     Admin interface for Role model.
-    Allows easy management of roles and permissions through Django admin.
+    Allows easy management of roles and their permissions through Django admin.
     """
-    
     list_display = ['name', 'description', 'is_active', 'user_count', 'created_at', 'updated_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'description']
-    ordering = ['name']
     readonly_fields = ['created_at', 'updated_at']
+    ordering = ['name']
     
     fieldsets = [
         (None, {
             'fields': ['name', 'description', 'is_active']
         }),
-        ('Permissions', {
+        (_('Permissions'), {
             'fields': ['permissions'],
             'description': (
-                'Define permissions as JSON. Examples:<br>'
-                '<b>Simple list:</b> {"permissions": ["create_post", "edit_post"]}<br>'
-                '<b>Grouped:</b> {"posts": ["create", "read", "update"], "comments": ["read"]}<br>'
-                '<b>Complex:</b> {"posts": {"create": true, "edit": {"condition": "own_only"}}}'
-            )
+                'Define permissions as a JSON object. Examples:<br>'
+                '<code>{"posts": ["create", "read", "update", "delete"]}</code><br>'
+                '<code>{"posts": {"create": true, "delete": false}}</code><br>'
+                'No migration needed when adding new permissions.'
+            ),
         }),
-        ('Timestamps', {
+        (_('Metadata'), {
             'fields': ['created_at', 'updated_at'],
-            'classes': ['collapse']
+            'classes': ['collapse'],
         }),
     ]
     
@@ -40,15 +39,24 @@ class RoleAdmin(admin.ModelAdmin):
         """Display number of users with this role."""
         return obj.users.count()
     user_count.short_description = 'Users'
+    
+    def save_model(self, request, obj, form, change):
+        """Save the model and provide feedback."""
+        super().save_model(request, obj, form, change)
+        if not change:
+            self.message_user(
+                request,
+                f'Role "{obj.name}" created successfully. '
+                f'You can now assign this role to users.'
+            )
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """
-    Custom admin interface for User model.
-    Extended to support role-based access control.
+    Admin interface for User model.
+    Extended to include role management.
     """
-    
     list_display = ['email', 'first_name', 'last_name', 'display_roles', 'is_active', 'is_staff', 'date_joined']
     list_filter = ['is_active', 'is_staff', 'is_superuser', 'roles', 'date_joined']
     search_fields = ['email', 'first_name', 'last_name']
@@ -64,17 +72,12 @@ class UserAdmin(BaseUserAdmin):
             'fields': ['first_name', 'last_name']
         }),
         (_('Roles & Permissions'), {
-            'fields': ['roles', 'is_active', 'is_staff', 'is_superuser'],
-            'description': 'Assign roles to grant permissions. Superuser has all permissions.'
-        }),
-        (_('Django Permissions (Advanced)'), {
-            'fields': ['groups', 'user_permissions'],
-            'classes': ['collapse'],
-            'description': 'Django built-in permissions system. Use roles instead for custom permissions.'
+            'fields': ['roles', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'],
+            'description': 'Assign roles to grant permissions. Roles provide flexible, JSON-based permissions.'
         }),
         (_('Important dates'), {
-            'fields': ['last_login', 'date_joined', 'updated_at'],
-            'classes': ['collapse']
+            'fields': ['date_joined', 'updated_at', 'last_login'],
+            'classes': ['collapse'],
         }),
     ]
     
@@ -87,6 +90,14 @@ class UserAdmin(BaseUserAdmin):
     
     def display_roles(self, obj):
         """Display user's roles as comma-separated list."""
-        roles = obj.roles.filter(is_active=True).values_list('name', flat=True)
-        return ', '.join(roles) if roles else '-'
-    display_roles.short_description = 'Active Roles'
+        roles = obj.roles.filter(is_active=True)
+        if roles.exists():
+            return ', '.join([role.name for role in roles])
+        return '-'
+    display_roles.short_description = 'Roles'
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make last_login readonly only when editing existing user."""
+        if obj:
+            return self.readonly_fields + ['last_login']
+        return self.readonly_fields

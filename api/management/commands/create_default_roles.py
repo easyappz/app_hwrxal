@@ -3,44 +3,49 @@ from api.models import Role
 
 
 class Command(BaseCommand):
-    """
-    Management command to create default roles for the application.
-    
-    Usage:
-        python manage.py create_default_roles
-    
-    This command is idempotent - it won't create duplicate roles if they already exist.
-    """
-    
-    help = 'Creates default roles (user) for the application'
+    help = 'Create default roles for the application'
 
     def handle(self, *args, **options):
         """
-        Create default 'user' role with basic permissions.
+        Create default 'user' role with full permissions.
+        This can be extended to create additional roles.
         """
         
-        # Define default role configuration
+        # Define default roles and their permissions
         default_roles = [
             {
                 'name': 'user',
-                'description': 'Default user role with basic permissions',
+                'description': 'Default user role with full basic permissions',
                 'permissions': {
-                    # Example permission structure - can be extended as needed
-                    # Using grouped by resource structure:
+                    # Full permissions for basic user
+                    # Using grouped structure for better organization
                     'profile': ['read', 'update'],
-                    'posts': ['create', 'read'],
-                    'comments': ['create', 'read'],
-                    
-                    # Alternative: simple list structure
-                    # 'permissions': [
-                    #     'read_profile',
-                    #     'update_profile',
-                    #     'create_post',
-                    #     'read_post',
-                    # ]
+                    'posts': ['create', 'read', 'update', 'delete'],
+                    'comments': ['create', 'read', 'update', 'delete'],
                 },
                 'is_active': True,
             },
+            # You can add more default roles here:
+            # {
+            #     'name': 'moderator',
+            #     'description': 'Moderator with extended permissions',
+            #     'permissions': {
+            #         'profile': ['read', 'update'],
+            #         'posts': ['create', 'read', 'update', 'delete'],
+            #         'comments': ['create', 'read', 'update', 'delete'],
+            #         'users': ['read', 'moderate'],
+            #         'reports': ['read', 'resolve'],
+            #     },
+            #     'is_active': True,
+            # },
+            # {
+            #     'name': 'admin',
+            #     'description': 'Administrator with full permissions',
+            #     'permissions': {
+            #         'all': True,  # Simple flag for full access
+            #     },
+            #     'is_active': True,
+            # },
         ]
         
         created_count = 0
@@ -59,58 +64,33 @@ class Command(BaseCommand):
             if created:
                 created_count += 1
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f"✓ Created role '{role.name}'"
-                    )
+                    self.style.SUCCESS(f"Created role: {role.name}")
                 )
             else:
-                # Update existing role if needed
-                updated = False
-                if role.description != role_data['description']:
-                    role.description = role_data['description']
-                    updated = True
-                if role.permissions != role_data['permissions']:
-                    role.permissions = role_data['permissions']
-                    updated = True
-                if role.is_active != role_data['is_active']:
-                    role.is_active = role_data['is_active']
-                    updated = True
-                
-                if updated:
-                    role.save()
-                    updated_count += 1
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"⟳ Updated role '{role.name}'"
-                        )
-                    )
-                else:
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"→ Role '{role.name}' already exists and is up to date"
-                        )
-                    )
+                # Optionally update existing role
+                # Uncomment the following lines to update existing roles
+                # role.description = role_data['description']
+                # role.permissions = role_data['permissions']
+                # role.is_active = role_data['is_active']
+                # role.save()
+                # updated_count += 1
+                self.stdout.write(
+                    self.style.WARNING(f"Role already exists: {role.name}")
+                )
         
-        # Summary
         self.stdout.write(
             self.style.SUCCESS(
-                f"\nSummary: {created_count} created, {updated_count} updated"
+                f"\nSummary: {created_count} role(s) created, {updated_count} role(s) updated"
             )
         )
         
-        # Show instructions for extending
-        if created_count > 0:
-            self.stdout.write(
-                self.style.NOTICE(
-                    "\nTo add more roles or modify permissions:"
-                )
+        # Display instructions
+        self.stdout.write(
+            self.style.SUCCESS(
+                "\nTo extend permissions in the future:"
+                "\n1. Add new permission keys to the JSON structure in admin panel"
+                "\n2. Or modify the default_roles list in this command"
+                "\n3. Run this command again to create new roles"
+                "\n4. No database migration needed for permission changes"
             )
-            self.stdout.write(
-                "  1. Use Django admin panel at /admin/api/role/"
-            )
-            self.stdout.write(
-                "  2. Or modify this management command and run it again"
-            )
-            self.stdout.write(
-                "  3. Or create roles programmatically in your code"
-            )
+        )
