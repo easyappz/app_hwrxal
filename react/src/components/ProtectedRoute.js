@@ -8,18 +8,18 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <div style={{
-          color: 'white',
+      <div 
+        data-easytag="id1-react/src/components/ProtectedRoute.js"
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
           fontSize: '18px',
-          fontWeight: '600'
-        }}>
+          color: '#666'
+        }}
+      >
+        <div data-easytag="id2-react/src/components/ProtectedRoute.js">
           Loading...
         </div>
       </div>
