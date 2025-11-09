@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
+import secrets
+from datetime import timedelta
 
 
 class UserManager(BaseUserManager):
@@ -395,3 +397,179 @@ class User(AbstractBaseUser, PermissionsMixin):
                             combined_permissions[key].update(value)
         
         return combined_permissions
+
+
+class RefreshToken(models.Model):
+    """
+    Model to store refresh tokens for JWT authentication.
+    Allows for token rotation, revocation, and blacklisting.
+    """
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="refresh_tokens",
+        verbose_name="User",
+        help_text="User who owns this refresh token"
+    )
+    
+    token = models.CharField(
+        verbose_name="Token",
+        max_length=255,
+        unique=True,
+        db_index=True,
+        help_text="Unique refresh token string"
+    )
+    
+    created_at = models.DateTimeField(
+        verbose_name="Created at",
+        auto_now_add=True,
+        help_text="When this token was created"
+    )
+    
+    expires_at = models.DateTimeField(
+        verbose_name="Expires at",
+        help_text="When this token expires"
+    )
+    
+    is_revoked = models.BooleanField(
+        verbose_name="Revoked",
+        default=False,
+        db_index=True,
+        help_text="Whether this token has been manually revoked"
+    )
+    
+    revoked_at = models.DateTimeField(
+        verbose_name="Revoked at",
+        null=True,
+        blank=True,
+        help_text="When this token was revoked"
+    )
+    
+    # Optional: Track device/session information
+    user_agent = models.TextField(
+        verbose_name="User agent",
+        blank=True,
+        help_text="User agent string from the device that created this token"
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        verbose_name="IP address",
+        null=True,
+        blank=True,
+        help_text="IP address from which this token was created"
+    )
+    
+    class Meta:
+        verbose_name = "Refresh Token"
+        verbose_name_plural = "Refresh Tokens"
+        ordering = ["-created_at"]
+        db_table = "refresh_tokens"
+        indexes = [
+            models.Index(fields=["token", "is_revoked"]),
+            models.Index(fields=["user", "is_revoked", "expires_at"]),
+            models.Index(fields=["expires_at"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.token[:20]}..."
+    
+    def is_valid(self):
+        """
+        Check if the token is valid (not expired and not revoked).
+        
+        Returns:
+            bool: True if token is valid, False otherwise
+        """
+        if self.is_revoked:
+            return False
+        
+        if timezone.now() > self.expires_at:
+            return False
+        
+        if not self.user.is_active:
+            return False
+        
+        return True
+    
+    def revoke(self):
+        """
+        Revoke this token.
+        """
+        if not self.is_revoked:
+            self.is_revoked = True
+            self.revoked_at = timezone.now()
+            self.save(update_fields=["is_revoked", "revoked_at"])
+    
+    @classmethod
+    def generate_token(cls):
+        """
+        Generate a unique token string.
+        
+        Returns:
+            str: Unique token string
+        """
+        return secrets.token_urlsafe(32)
+    
+    @classmethod
+    def create_token(cls, user, user_agent=None, ip_address=None, expires_in_days=7):
+        """
+        Create a new refresh token for a user.
+        
+        Args:
+            user: User instance
+            user_agent: Optional user agent string
+            ip_address: Optional IP address
+            expires_in_days: Number of days until expiration (default: 7)
+        
+        Returns:
+            RefreshToken: Created token instance
+        """
+        token_string = cls.generate_token()
+        expires_at = timezone.now() + timedelta(days=expires_in_days)
+        
+        token = cls.objects.create(
+            user=user,
+            token=token_string,
+            expires_at=expires_at,
+            user_agent=user_agent or "",
+            ip_address=ip_address
+        )
+        
+        return token
+    
+    @classmethod
+    def revoke_all_user_tokens(cls, user):
+        """
+        Revoke all refresh tokens for a specific user.
+        Useful for logout from all devices or security purposes.
+        
+        Args:
+            user: User instance
+        
+        Returns:
+            int: Number of tokens revoked
+        """
+        now = timezone.now()
+        updated = cls.objects.filter(
+            user=user,
+            is_revoked=False
+        ).update(
+            is_revoked=True,
+            revoked_at=now
+        )
+        return updated
+    
+    @classmethod
+    def cleanup_expired_tokens(cls):
+        """
+        Delete all expired tokens from the database.
+        Should be run periodically (e.g., via cron job or celery task).
+        
+        Returns:
+            int: Number of tokens deleted
+        """
+        count, _ = cls.objects.filter(
+            expires_at__lt=timezone.now()
+        ).delete()
+        return count

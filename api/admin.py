@@ -1,103 +1,135 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
-from api.models import User, Role
+from .models import User, Role, RefreshToken
 
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     """
     Admin interface for Role model.
-    Allows easy management of roles and their permissions through Django admin.
     """
-    list_display = ['name', 'description', 'is_active', 'user_count', 'created_at', 'updated_at']
-    list_filter = ['is_active', 'created_at']
-    search_fields = ['name', 'description']
-    readonly_fields = ['created_at', 'updated_at']
-    ordering = ['name']
+    list_display = ["name", "description", "is_active", "created_at", "user_count"]
+    list_filter = ["is_active", "created_at"]
+    search_fields = ["name", "description"]
+    ordering = ["name"]
+    readonly_fields = ["created_at", "updated_at"]
     
     fieldsets = [
         (None, {
-            'fields': ['name', 'description', 'is_active']
+            "fields": ["name", "description", "is_active"]
         }),
-        (_('Permissions'), {
-            'fields': ['permissions'],
-            'description': (
-                'Define permissions as a JSON object. Examples:<br>'
-                '<code>{"posts": ["create", "read", "update", "delete"]}</code><br>'
-                '<code>{"posts": {"create": true, "delete": false}}</code><br>'
-                'No migration needed when adding new permissions.'
-            ),
+        ("Permissions", {
+            "fields": ["permissions"],
+            "description": "Define permissions as JSON. Example: {\"posts\": [\"create\", \"read\", \"update\", \"delete\"]}"
         }),
-        (_('Metadata'), {
-            'fields': ['created_at', 'updated_at'],
-            'classes': ['collapse'],
+        ("Metadata", {
+            "fields": ["created_at", "updated_at"],
+            "classes": ["collapse"]
         }),
     ]
     
     def user_count(self, obj):
-        """Display number of users with this role."""
+        """Display the number of users with this role."""
         return obj.users.count()
-    user_count.short_description = 'Users'
-    
-    def save_model(self, request, obj, form, change):
-        """Save the model and provide feedback."""
-        super().save_model(request, obj, form, change)
-        if not change:
-            self.message_user(
-                request,
-                f'Role "{obj.name}" created successfully. '
-                f'You can now assign this role to users.'
-            )
+    user_count.short_description = "Users"
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """
-    Admin interface for User model.
-    Extended to include role management.
+    Admin interface for custom User model.
     """
-    list_display = ['email', 'first_name', 'last_name', 'display_roles', 'is_active', 'is_staff', 'date_joined']
-    list_filter = ['is_active', 'is_staff', 'is_superuser', 'roles', 'date_joined']
-    search_fields = ['email', 'first_name', 'last_name']
-    ordering = ['-date_joined']
-    filter_horizontal = ['roles', 'groups', 'user_permissions']
-    readonly_fields = ['date_joined', 'updated_at']
+    list_display = ["email", "first_name", "last_name", "is_active", "is_staff", "date_joined", "role_list"]
+    list_filter = ["is_active", "is_staff", "is_superuser", "date_joined", "roles"]
+    search_fields = ["email", "first_name", "last_name"]
+    ordering = ["-date_joined"]
+    readonly_fields = ["date_joined", "updated_at"]
+    filter_horizontal = ["roles", "groups", "user_permissions"]
     
     fieldsets = [
         (None, {
-            'fields': ['email', 'password']
+            "fields": ["email", "password"]
         }),
-        (_('Personal info'), {
-            'fields': ['first_name', 'last_name']
+        (_("Personal info"), {
+            "fields": ["first_name", "last_name"]
         }),
-        (_('Roles & Permissions'), {
-            'fields': ['roles', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'],
-            'description': 'Assign roles to grant permissions. Roles provide flexible, JSON-based permissions.'
+        (_("Roles and Permissions"), {
+            "fields": ["roles", "is_active", "is_staff", "is_superuser", "groups", "user_permissions"],
         }),
-        (_('Important dates'), {
-            'fields': ['date_joined', 'updated_at', 'last_login'],
-            'classes': ['collapse'],
+        (_("Important dates"), {
+            "fields": ["date_joined", "updated_at", "last_login"],
+            "classes": ["collapse"]
         }),
     ]
     
     add_fieldsets = [
         (None, {
-            'classes': ['wide'],
-            'fields': ['email', 'password1', 'password2', 'first_name', 'last_name', 'roles'],
+            "classes": ["wide"],
+            "fields": ["email", "password1", "password2", "first_name", "last_name", "roles"],
         }),
     ]
     
-    def display_roles(self, obj):
-        """Display user's roles as comma-separated list."""
-        roles = obj.roles.filter(is_active=True)
-        if roles.exists():
-            return ', '.join([role.name for role in roles])
-        return '-'
-    display_roles.short_description = 'Roles'
+    def role_list(self, obj):
+        """Display comma-separated list of user's roles."""
+        return ", ".join([role.name for role in obj.roles.all()])
+    role_list.short_description = "Roles"
+
+
+@admin.register(RefreshToken)
+class RefreshTokenAdmin(admin.ModelAdmin):
+    """
+    Admin interface for RefreshToken model.
+    """
+    list_display = ["user", "token_preview", "created_at", "expires_at", "is_revoked", "is_valid_status"]
+    list_filter = ["is_revoked", "created_at", "expires_at"]
+    search_fields = ["user__email", "token", "ip_address"]
+    ordering = ["-created_at"]
+    readonly_fields = ["token", "created_at", "revoked_at", "user_agent", "ip_address"]
+    date_hierarchy = "created_at"
     
-    def get_readonly_fields(self, request, obj=None):
-        """Make last_login readonly only when editing existing user."""
-        if obj:
-            return self.readonly_fields + ['last_login']
-        return self.readonly_fields
+    fieldsets = [
+        ("Token Information", {
+            "fields": ["user", "token", "created_at", "expires_at"]
+        }),
+        ("Status", {
+            "fields": ["is_revoked", "revoked_at"]
+        }),
+        ("Device Information", {
+            "fields": ["user_agent", "ip_address"],
+            "classes": ["collapse"]
+        }),
+    ]
+    
+    def token_preview(self, obj):
+        """Display truncated token for security."""
+        return f"{obj.token[:20]}..."
+    token_preview.short_description = "Token"
+    
+    def is_valid_status(self, obj):
+        """Display whether token is currently valid."""
+        return obj.is_valid()
+    is_valid_status.boolean = True
+    is_valid_status.short_description = "Valid"
+    
+    def has_add_permission(self, request):
+        """Prevent manual creation of tokens through admin."""
+        return False
+    
+    actions = ["revoke_tokens", "delete_expired_tokens"]
+    
+    def revoke_tokens(self, request, queryset):
+        """Action to revoke selected tokens."""
+        count = 0
+        for token in queryset.filter(is_revoked=False):
+            token.revoke()
+            count += 1
+        self.message_user(request, f"{count} token(s) revoked successfully.")
+    revoke_tokens.short_description = "Revoke selected tokens"
+    
+    def delete_expired_tokens(self, request, queryset):
+        """Action to delete expired tokens."""
+        from django.utils import timezone
+        count = queryset.filter(expires_at__lt=timezone.now()).delete()[0]
+        self.message_user(request, f"{count} expired token(s) deleted successfully.")
+    delete_expired_tokens.short_description = "Delete expired tokens"
