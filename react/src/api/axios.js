@@ -18,14 +18,6 @@ export const instance = axios.create({
 instance.interceptors.request.use(
   (config) => {
     console.log('request', { config });
-
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      // Remove Authorization header if no token is present to avoid sending empty or invalid headers
-      delete config.headers['Authorization'];
-    }
   
     return config;
   },
@@ -70,5 +62,8 @@ instance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Import auth interceptor to handle conditional Authorization header
+import './authInterceptor';
 
 export default instance;
