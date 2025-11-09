@@ -24,6 +24,7 @@ class HelloView(APIView):
     A simple API endpoint that returns a greeting message.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     @extend_schema(
         responses={200: MessageSerializer}, 
@@ -44,6 +45,7 @@ class UserRegistrationView(generics.CreateAPIView):
     """
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
+    authentication_classes = []
     
     @extend_schema(
         request=UserRegistrationSerializer,
@@ -78,6 +80,7 @@ class UserLoginView(APIView):
     Creates a refresh token record in the database for token management.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     
     def get_client_ip(self, request):
         """Extract client IP address from request."""
@@ -159,6 +162,7 @@ class TokenRefreshView(APIView):
     Uses Simple JWT for token validation and generation.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     
     @extend_schema(
         request=TokenRefreshSerializer,
@@ -362,6 +366,7 @@ class PasswordResetRequestView(APIView):
     For now, the token is stored in the database and can be retrieved for testing.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     
     def get_client_ip(self, request):
         """Extract client IP address from request."""
@@ -424,6 +429,7 @@ class PasswordResetConfirmView(APIView):
     Validates the reset token and sets the new password.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     
     @extend_schema(
         request=PasswordResetConfirmSerializer,
